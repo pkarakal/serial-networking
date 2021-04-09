@@ -63,6 +63,7 @@
                         </goals>
                         <configuration>
                             <mainClass>org.pkarakal.serialNetworking.SerialNetworking</mainClass>
+                            <includeSystemScope>true</includeSystemScope>
                         </configuration>
                     </execution>
                 </executions>
@@ -94,6 +95,22 @@
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>4.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>comm</artifactId>
+            <version>3.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/comm.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>ithakimodem</groupId>
+            <artifactId>ithakimodem</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/ithakimodem.jar</systemPath>
+            <optional>true</optional>
         </dependency>
 
 

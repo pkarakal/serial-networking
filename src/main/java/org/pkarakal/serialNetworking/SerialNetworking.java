@@ -25,13 +25,26 @@
 
 package org.pkarakal.serialNetworking;
 
+import org.apache.commons.cli.*;
+
 import java.io.IOException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 public class SerialNetworking {
-    public static void main(String[] args) {
+    private final static Options options = new Options();
+    
+    static {
+        options.addRequiredOption("i", "ithaki-destination", true, "Define the destination of the modem. Accepted values are ithaki, ithakicopter");
+        options.addRequiredOption("r", "request-code", true, "Define the request code");
+        options.addRequiredOption("j", "job", true, "Define the job to execute. The valid parameters are echo, image, gps, ");
+        options.addOption("m", "CAM", true, "Define one of two cameras: FIX, PTZ, or number like XX");
+        options.addOption("d", "DIR", true, "Define the direction of the camera. Accepted values are U,D,L,R,C,M");
+        options.addOption("s", "SIZE", true, "Define the size of the picture. Accepted values are S, L");
+    }
+    
+    public static void main(String[] args) throws Exception {
         Logger logger = Logger.getLogger("networking");
         FileHandler fh;
         try {
@@ -45,5 +58,50 @@ public class SerialNetworking {
             e.printStackTrace();
         }
         logger.info("Application started");
+        if (args.length > 1) {
+            final CommandLineParser parser = new DefaultParser();
+            try {
+                final CommandLine cmd = parser.parse(options, args);
+                String code = cmd.getOptionValue("r");
+                String job = cmd.getOptionValue("j");
+                if (cmd.getOptionValue("j").equals("image")) {
+                    if (cmd.hasOption("m")) {
+                        code = code.concat(" CAM=").concat(cmd.getOptionValue("m"));
+                    }
+                    if (cmd.hasOption("m") && cmd.getOptionValue("m").equals("PTZ")
+                                && cmd.hasOption("d")) {
+                        code = code.concat(" DIR=").concat(cmd.getOptionValue("d"));
+                    }
+                    if (cmd.hasOption("f") && cmd.getOptionValue("f").equals("ON")) {
+                        code = code.concat(" FLOW=").concat(cmd.getOptionValue("f"));
+                    }
+                    if (cmd.hasOption("s")) {
+                        code = code.concat(" SIZE=").concat(cmd.getOptionValue("s"));
+                    }
+                }
+                code = code.concat("\r");
+                Request receiver = null;
+                switch (job) {
+                    case "echo":
+                        logger.info("Starting echo functionality");
+                        receiver = new MessageDispatcher(code, logger, cmd.getOptionValue("i"));
+                        break;
+                    case "image":
+                        logger.info("Starting image receiving functionality");
+                        receiver = new ImageReceiver(code, logger, cmd.getOptionValue("i"));
+                        break;
+                    default:
+                        break;
+                }
+                assert receiver != null;
+                receiver.sendRequest();
+                logger.info("Job completed. Closing application");
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        } else {
+            logger.severe("Wrong number of application parameters. Exiting...");
+            throw new Exception("Wrong number of application parameters");
+        }
     }
 }

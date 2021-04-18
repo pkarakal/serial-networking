@@ -28,6 +28,7 @@ package org.pkarakal.serialNetworking;
 import org.apache.commons.cli.*;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -42,6 +43,9 @@ public class SerialNetworking {
         options.addOption("m", "CAM", true, "Define one of two cameras: FIX, PTZ, or number like XX");
         options.addOption("d", "DIR", true, "Define the direction of the camera. Accepted values are U,D,L,R,C,M");
         options.addOption("s", "SIZE", true, "Define the size of the picture. Accepted values are S, L");
+        options.addOption("p", "pre-saved-route", true, "Define a predefined route.");
+        options.addOption("g", "google-maps-image", true, "Define longitude and latitude for the location");
+        options.addOption("f", "file-input", false, "Define if you want to take the coordinates from file. This is a flag and shouldn't be given arguments");
     }
     
     public static void main(String[] args) throws Exception {
@@ -79,6 +83,12 @@ public class SerialNetworking {
                         code = code.concat(" SIZE=").concat(cmd.getOptionValue("s"));
                     }
                 }
+                if (cmd.hasOption("p") && cmd.getOptionValue("j").toUpperCase(Locale.ROOT).equals("gps".toUpperCase(Locale.ROOT))) {
+                    code = code.concat("R=").concat(cmd.getOptionValue("p"));
+                }
+                if (cmd.hasOption("g") && cmd.getOptionValue("j").toUpperCase(Locale.ROOT).equals("gps".toUpperCase(Locale.ROOT))) {
+                    code = code.concat("T=").concat(cmd.getOptionValue("g"));
+                }
                 code = code.concat("\r");
                 Request receiver = null;
                 switch (job) {
@@ -89,6 +99,10 @@ public class SerialNetworking {
                     case "image":
                         logger.info("Starting image receiving functionality");
                         receiver = new ImageReceiver(code, logger, cmd.getOptionValue("i"));
+                        break;
+                    case "gps":
+                        logger.info("Starting gps info receiving functionality");
+                        receiver = new GPSInfoReceiver(code, logger, cmd.getOptionValue("i"), cmd.hasOption("g") || cmd.hasOption("f"), cmd.hasOption("f"));
                         break;
                     default:
                         break;

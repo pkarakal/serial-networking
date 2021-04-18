@@ -45,6 +45,7 @@ public class SerialNetworking {
         options.addOption("s", "SIZE", true, "Define the size of the picture. Accepted values are S, L");
         options.addOption("p", "pre-saved-route", true, "Define a predefined route.");
         options.addOption("g", "google-maps-image", true, "Define longitude and latitude for the location");
+        options.addOption("f", "file-input", false, "Define if you want to take the coordinates from file. This is a flag and shouldn't be given arguments");
     }
     
     public static void main(String[] args) throws Exception {
@@ -101,7 +102,7 @@ public class SerialNetworking {
                         break;
                     case "gps":
                         logger.info("Starting gps info receiving functionality");
-                        receiver = new GPSInfoReceiver(code, logger, cmd.getOptionValue("i"), cmd.hasOption("g"));
+                        receiver = new GPSInfoReceiver(code, logger, cmd.getOptionValue("i"), cmd.hasOption("g") || cmd.hasOption("f"), cmd.hasOption("f"));
                         break;
                     default:
                         break;

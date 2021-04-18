@@ -30,15 +30,19 @@ import com.opencsv.CSVWriter;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 public class GPSInfoReceiver extends MessageDispatcher{
     boolean receiveImage;
     HashMap<Boolean, String> fileName;
-    public GPSInfoReceiver(String code, Logger logger, String destination, boolean isImage) {
+    boolean readFromFile;
+    public GPSInfoReceiver(String code, Logger logger, String destination, boolean isImage, boolean fromFile) {
         super(code, logger, destination);
         this.receiveImage = isImage;
+        this.readFromFile = fromFile;
         this._createImageHashMap();
     }
     
@@ -131,6 +135,8 @@ public class GPSInfoReceiver extends MessageDispatcher{
     private void imageReply() throws IOException {
         File gps = new File(fileName.get(this.receiveImage));
         FileOutputStream stream = new FileOutputStream(gps);
+        if(this.readFromFile)
+            this.handleCoordsFromFile();
         boolean isOpen = this.modem.open(this.destination);
         if(isOpen){
             boolean res = this.modem.write(this.code.getBytes());
@@ -164,5 +170,49 @@ public class GPSInfoReceiver extends MessageDispatcher{
             stream.close();
             modem.close();
         }
+    }
+    
+    private void handleCoordsFromFile(){
+        System.out.println("Here");
+        FileReader inputFile = null;
+        CSVReader reader = null;
+        File gps_csv = new File(fileName.get(false));
+        try {
+            inputFile = new FileReader(gps_csv);
+            reader = new CSVReader(inputFile);
+            List<String[]> allElements = reader.readAll();
+            List<String[]> filteredItems = this.searchForCoordinates(allElements);
+            ArrayList<String> finResult = this.createCoordsFromFile(filteredItems);
+            System.out.println(filteredItems);
+            this.createCode(finResult);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private List<String[]> searchForCoordinates(List<String[]> elements) {
+        Predicate<String[]> filteredElements = element -> element[0].toUpperCase(Locale.ROOT).equals("$GPRMC".toUpperCase(Locale.ROOT));
+        return elements.stream().filter(filteredElements).collect(Collectors.toList());
+    }
+    
+    private ArrayList<String> createCoordsFromFile(List<String[]> elements){
+        ArrayList<String> coords = new ArrayList<>();
+        for (String[] elem: elements) {
+            String latitude = String.join("", elem[3].split("\\."));
+            latitude = latitude.length() > 6 ? latitude.substring(0, 6) : latitude;
+            String longitude = String.join("", elem[5].split("\\."));
+            longitude = longitude.length() > 6 ? longitude.substring(0, 6) : longitude;
+            coords.add(latitude.concat(longitude));
+        }
+        return coords;
+    }
+    
+    private void createCode(ArrayList<String> elements) {
+        String code ="";
+        code = this.code.split("\\r")[0];
+        for (String item: elements) {
+            code = code.concat("T=".concat(item));
+        }
+        this.code = code.concat("\r");
     }
 }

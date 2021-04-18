@@ -26,7 +26,6 @@
 package org.pkarakal.serialNetworking;
 
 import com.opencsv.CSVWriter;
-import ithakimodem.Modem;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -34,51 +33,45 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class MessageDispatcher implements Request {
-    Modem modem;
-    String code;
-    File echo;
-    Logger logger;
-    String destination;
+public class EchoAcknowledgement extends MessageDispatcher{
+    String ackCode;
+    String nackCode;
+    int errors = 0;
     
-    MessageDispatcher(String code, Logger logger, String destination){
-        this.code = code;
-        this.logger = logger;
-        this.destination = destination;
-        this.initModem();
-    }
-    
-    private void initModem(){
-        this.modem = new Modem();
-        this.modem.setSpeed(80000);
-        this.modem.setTimeout(8000);
+    EchoAcknowledgement(String code, Logger logger, String destination, String ack, String nack) {
+        super(code, logger, destination);
+        this.ackCode = ack;
+        this.nackCode = nack;
     }
     
     @Override
     public void sendRequest() {
         boolean isOpen = this.modem.open(this.destination);
-        long totalMs = (long) (4 * 60000);
+        long totalMs = 4 * 60000;
         long echoStartTime = System.currentTimeMillis();
-        long totalElapsedMs = 0;
+        long totalElapsedMs;
         int packetCount = 0;
-        this.echo = new File("echo" + new Date() +".csv");
-        FileWriter outputFile = null;
+        this.echo = new File("ack_echo_" + new Date() +".csv");
+        FileWriter outputFile;
         try {
             outputFile = new FileWriter(echo);
-            // create CSVWriter object filewriter object as parameter
+            // create CSVWriter object fileWriter object as parameter
             CSVWriter writer = new CSVWriter(outputFile);
-            String[] headers = new String[4];
+            String[] headers = new String[5];
             headers[0] = "Packet";
             headers[1] = "CurrentTime";
             headers[2] = "Value";
             headers[3] = "Duration";
+            headers[4] = "Time sent";
             logger.info("Writing table headers to csv file");
             writer.writeNext(headers);
             if (isOpen) {
+                boolean res = this.modem.write(this.code.getBytes());
                 while ((totalElapsedMs = System.currentTimeMillis() - echoStartTime) < totalMs) {
                     long startTime = System.currentTimeMillis();
-                    boolean res = this.modem.write(this.code.getBytes());
                     String response = "";
                     if (!res) {
                         logger.severe("Couldn't send message to server");
@@ -93,15 +86,24 @@ public class MessageDispatcher implements Request {
                             }
                             response = response.concat(String.valueOf((char) k));
                             if (response.contains("PSTOP")) {
-                                long endTime = System.currentTimeMillis();
-                                long responseTime = endTime - startTime;
-                                String[] values = new String[4];
-                                values[0]= String.valueOf(packetCount);
-                                values[1]= String.valueOf(endTime);
-                                values[2]= response;
-                                values[3]= String.valueOf(responseTime);
-                                writer.writeNext(values);
-                                ++packetCount;
+                                if(!checkForErrors(response)) {
+                                    long endTime = System.currentTimeMillis();
+                                    long responseTime = endTime - startTime;
+                                    String[] values = new String[5];
+                                    values[0] = String.valueOf(packetCount);
+                                    values[1] = String.valueOf(endTime);
+                                    values[2] = response;
+                                    values[3] = String.valueOf(responseTime);
+                                    values[4] = String.valueOf(this.errors);
+                                    writer.writeNext(values);
+                                    ++packetCount;
+                                    this.errors=0;
+                                    this.modem.write(this.ackCode.getBytes());
+                                } else {
+                                    ++this.errors;
+                                    System.out.println(this.errors);
+                                    this.modem.write(this.nackCode.getBytes());
+                                }
                                 break;
                             }
                         } catch (Exception ex) {
@@ -119,5 +121,27 @@ public class MessageDispatcher implements Request {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    private boolean checkForErrors(String response){
+        Pattern messagePattern = Pattern.compile("<.*?>");
+        Matcher messageMatcher = messagePattern.matcher(response);
+        String message = messageMatcher.find() ?
+                                 messageMatcher.group().replaceAll("[^A-Za-z0-9]", ""): "";
+        Pattern codePattern = Pattern.compile("> \\d{3}");
+        Matcher codeMatcher = codePattern.matcher(response);
+        int code = codeMatcher.find() ? Integer.parseInt(codeMatcher.group().replaceAll("[^\\d.]", "")) : 0;
+        System.out.println("message: ".concat(message).concat(" code: ".concat(String.valueOf(code))));
+        return !(code == XOR(message));
+    }
+    
+    private int XOR(String message) {
+        if (message.length() > 0) {
+            int ans = message.charAt(0);
+            for (int i = 1; i < message.length(); i++)
+                ans = (ans ^ (message.charAt(i)));
+            return ans;
+        }
+        return 0;
     }
 }

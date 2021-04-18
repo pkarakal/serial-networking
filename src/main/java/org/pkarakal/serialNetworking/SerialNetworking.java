@@ -39,13 +39,15 @@ public class SerialNetworking {
     static {
         options.addRequiredOption("i", "ithaki-destination", true, "Define the destination of the modem. Accepted values are ithaki, ithakicopter");
         options.addRequiredOption("r", "request-code", true, "Define the request code");
-        options.addRequiredOption("j", "job", true, "Define the job to execute. The valid parameters are echo, image, gps, ");
+        options.addRequiredOption("j", "job", true, "Define the job to execute. The valid parameters are echo, image, gps, ack");
         options.addOption("m", "CAM", true, "Define one of two cameras: FIX, PTZ, or number like XX");
         options.addOption("d", "DIR", true, "Define the direction of the camera. Accepted values are U,D,L,R,C,M");
         options.addOption("s", "SIZE", true, "Define the size of the picture. Accepted values are S, L");
         options.addOption("p", "pre-saved-route", true, "Define a predefined route.");
         options.addOption("g", "google-maps-image", true, "Define longitude and latitude for the location");
         options.addOption("f", "file-input", false, "Define if you want to take the coordinates from file. This is a flag and shouldn't be given arguments");
+        options.addOption("a", "ack", true, "Define the ack code to send to server on correct packet receiving.");
+        options.addOption("n", "nack", true, "Define the ack code to send to server on incorrect packet receiving.");
     }
     
     public static void main(String[] args) throws Exception {
@@ -104,6 +106,9 @@ public class SerialNetworking {
                         logger.info("Starting gps info receiving functionality");
                         receiver = new GPSInfoReceiver(code, logger, cmd.getOptionValue("i"), cmd.hasOption("g") || cmd.hasOption("f"), cmd.hasOption("f"));
                         break;
+                    case "ack":
+                        logger.info("Starting echo acknowledgment receiving functionality");
+                        receiver = new EchoAcknowledgement(code, logger, cmd.getOptionValue("i"), cmd.getOptionValue("a").concat("\r"), cmd.getOptionValue("n").concat("\r"));
                     default:
                         break;
                 }

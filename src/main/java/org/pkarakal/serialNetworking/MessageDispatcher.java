@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.logging.Logger;
 
 public class MessageDispatcher implements Request {
@@ -61,7 +62,7 @@ public class MessageDispatcher implements Request {
         long echoStartTime = System.currentTimeMillis();
         long totalElapsedMs = 0;
         int packetCount = 0;
-        this.echo = new File("echo.csv");
+        this.echo = new File("echo" + new Date() +".csv");
         FileWriter outputFile = null;
         try {
             outputFile = new FileWriter(echo);

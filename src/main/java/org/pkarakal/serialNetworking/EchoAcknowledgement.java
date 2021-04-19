@@ -94,14 +94,13 @@ public class EchoAcknowledgement extends MessageDispatcher{
                                     values[1] = String.valueOf(endTime);
                                     values[2] = response;
                                     values[3] = String.valueOf(responseTime);
-                                    values[4] = String.valueOf(this.errors);
+                                    values[4] = String.valueOf(this.errors+1);
                                     writer.writeNext(values);
                                     ++packetCount;
                                     this.errors=0;
                                     this.modem.write(this.ackCode.getBytes());
                                 } else {
                                     ++this.errors;
-                                    System.out.println(this.errors);
                                     this.modem.write(this.nackCode.getBytes());
                                 }
                                 break;

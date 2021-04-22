@@ -8,8 +8,12 @@ import sys
 def parse_echo_csv():
     all_files = glob.glob("echo*.csv")
     for filename in all_files:
+        fig = pyplot.figure()
         frame = read_csv(filename, header=0, index_col=0, usecols=[0, 3])
-        frame.plot()
+        pyplot.plot(frame["Duration"])
+        pyplot.xlabel("Packets")
+        pyplot.ylabel("Duration")
+        fig.text(.5, .05, f"Mean response time: {calculate_mean_response_time(frame)}", ha='center')
     pyplot.show()
 
 
@@ -18,6 +22,7 @@ def parse_ack_csv():
     for filename in all_files:
         fig = pyplot.figure()
         frame = read_csv(filename, header=0, index_col=0, usecols=[0, 3, 4])
+        # plot_times_sent(frame)
         pyplot.plot(frame["Duration"])
         pyplot.xlabel("Packets")
         pyplot.ylabel("Duration (s)")
@@ -26,14 +31,20 @@ def parse_ack_csv():
 
 
 def calculate_ber(frame):
-    total_packets = len(frame)
+    ack = len(frame)
     res = frame.groupby("Time sent").count()
-    p = 0
-    for i in res.Duration.keys().tolist():
-        index = res.Duration.keys().tolist().index(i)
-        p += res["Duration"].values[index] if i > 1 else 0
-    print(p)
-    return p/total_packets
+    nack = 0
+    for key, value in enumerate(res.Duration.keys()):
+        nack += res["Duration"].values[key] * value if value > 1 else 0
+    return 1.0 - (float(ack) / float(ack + nack)) ** (1.0/128.0)
+
+
+def calculate_mean_response_time(frame):
+    return frame["Duration"].mean()
+
+
+def plot_times_sent(frame):
+    frame.groupby("Time sent")["Time sent"].hist(bins=10)
 
 
 def open_images():

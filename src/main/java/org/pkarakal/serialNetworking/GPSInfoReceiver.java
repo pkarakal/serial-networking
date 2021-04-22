@@ -29,6 +29,7 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 
 import java.io.*;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -62,7 +63,9 @@ public class GPSInfoReceiver extends MessageDispatcher{
     private void _createImageHashMap() {
         this.fileName = new HashMap<>(2);
         this.fileName.put(true, "image_gps" + new Date() + ".jpg");
-        this.fileName.put(false, "gps.csv");
+        Date date = new Date();
+        DateFormat dt = DateFormat.getDateInstance(DateFormat.SHORT, Locale.ENGLISH);
+        this.fileName.put(false, "gps" + dt.format(date).replaceAll("[/]+", ".") +".csv");
     }
     
     private void textReply() {
@@ -173,7 +176,6 @@ public class GPSInfoReceiver extends MessageDispatcher{
     }
     
     private void handleCoordsFromFile(){
-        System.out.println("Here");
         FileReader inputFile = null;
         CSVReader reader = null;
         File gps_csv = new File(fileName.get(false));
@@ -183,7 +185,6 @@ public class GPSInfoReceiver extends MessageDispatcher{
             List<String[]> allElements = reader.readAll();
             List<String[]> filteredItems = this.searchForCoordinates(allElements);
             ArrayList<String> finResult = this.createCoordsFromFile(filteredItems);
-            System.out.println(filteredItems);
             this.createCode(finResult);
         } catch (IOException e) {
             e.printStackTrace();
@@ -191,18 +192,20 @@ public class GPSInfoReceiver extends MessageDispatcher{
     }
     
     private List<String[]> searchForCoordinates(List<String[]> elements) {
-        Predicate<String[]> filteredElements = element -> element[0].toUpperCase(Locale.ROOT).equals("$GPRMC".toUpperCase(Locale.ROOT));
+        Predicate<String[]> filteredElements = element -> element[0].toUpperCase(Locale.ROOT).equals("$GPGGA".toUpperCase(Locale.ROOT));
         return elements.stream().filter(filteredElements).collect(Collectors.toList());
     }
     
     private ArrayList<String> createCoordsFromFile(List<String[]> elements){
         ArrayList<String> coords = new ArrayList<>();
         for (String[] elem: elements) {
-            String latitude = String.join("", elem[3].split("\\."));
+            String latitude = String.join("", elem[2].split("\\."));
             latitude = latitude.length() > 6 ? latitude.substring(0, 6) : latitude;
-            String longitude = String.join("", elem[5].split("\\."));
+            String longitude = String.join("", elem[4].split("\\."));
             longitude = longitude.length() > 6 ? longitude.substring(0, 6) : longitude;
-            coords.add(latitude.concat(longitude));
+            if (!coords.contains(latitude.concat(longitude))) {
+                coords.add(latitude.concat(longitude));
+            }
         }
         return coords;
     }

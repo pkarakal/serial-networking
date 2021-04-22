@@ -130,7 +130,6 @@ public class EchoAcknowledgement extends MessageDispatcher{
         Pattern codePattern = Pattern.compile("> \\d{3}");
         Matcher codeMatcher = codePattern.matcher(response);
         int code = codeMatcher.find() ? Integer.parseInt(codeMatcher.group().replaceAll("[^\\d.]", "")) : 0;
-        System.out.println("message: ".concat(message).concat(" code: ".concat(String.valueOf(code))));
         return !(code == XOR(message));
     }
     
